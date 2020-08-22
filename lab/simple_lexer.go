@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
@@ -28,12 +29,15 @@ const(
 	LeftParen
 	RightParen
 )
-type TokenType int
 
 
 type Token struct {
 	TokenType string
 	TokenText string
+}
+
+func (t Token)String() string {
+	return fmt.Sprintf("[TokenType: %s,  TokenText: %s]\n", t.TokenType, t.TokenText)
 }
 var TokenText string //临时保存token文本
 var Tokens []Token //保存解析出来的token
@@ -114,86 +118,91 @@ func InitToken(ch byte) DfaState {
 	return NewState
 }
 //解析字符串，在不同的状态中迁移
-func Tokenize(code string)  {
+func Tokenize(code string) {
+	//将string放在一个缓冲区中
+	buf := bytes.NewBufferString(code)
 	var state DfaState
 	state = Initial //初始化状态
 
-	for i := 0; i < len(code); i++{
+	for {
+		ch, err := buf.ReadByte()
+		if err != nil {
+			break
+		}
 		switch state {
 		case Initial:
-			state = InitToken(code[i]) // 确定后续状态
+			state = InitToken(ch) // 确定后续状态
 		case Identifier:
-			if IsAlpha(code[i]) || IsDigit(code[i]){
-				TokenText += string(code[i])  //保持标识符状态
-			}else{
-				state = InitToken(code[i]) //退出标识符状态，并保存Token
+			if IsAlpha(ch) || IsDigit(ch) {
+				TokenText += string(ch) //保持标识符状态
+			} else {
+				state = InitToken(ch) //退出标识符状态，并保存Token
 			}
 		case IntLiteral:
-			if IsDigit(code[i]){
-				TokenText += string(code[i])
-			}else{
-				state = InitToken(code[i])
+			if IsDigit(ch) {
+				TokenText += string(ch)
+			} else {
+				state = InitToken(ch)
 			}
 		case GT:
-			if code[i] == '='{
+			if ch == '=' {
 				NowToken.TokenType = "GE"
-				TokenText += string(code[i])
+				TokenText += string(ch)
 				state = GE
-			}else{
-				state = InitToken(code[i]) //退出GT状态，并保存Token
+			} else {
+				state = InitToken(ch) //退出GT状态，并保存Token
 			}
 		case GE:
-			state = InitToken(code[i]) //退出GE状态，并保存Token
+			state = InitToken(ch) //退出GE状态，并保存Token
 		case Identifier_int1:
-			if code[i] == 'n'{
+			if ch == 'n' {
 				state = Identifier_int2
-				TokenText += string(code[i])
-			}else if IsAlpha(code[i]) || IsDigit(code[i]){
+				TokenText += string(ch)
+			} else if IsAlpha(ch) || IsDigit(ch) {
 				state = Identifier //切换会Identifier
 				TokenText += string(TokenText)
-			}else{
-				state = InitToken(code[i])
+			} else {
+				state = InitToken(ch)
 			}
 		case Identifier_int2:
-			if code[i] == 't'{
+			if ch == 't' {
 				state = Identifier_int3
-				TokenText += string(code[i])
-			}else if IsAlpha(code[i]) || IsDigit(code[i]){
+				TokenText += string(ch)
+			} else if IsAlpha(ch) || IsDigit(ch) {
 				state = Identifier //切换会Identifier
-				TokenText += string(code[i])
-			}else{
-				state = InitToken(code[i])
+				TokenText += string(ch)
+			} else {
+				state = InitToken(ch)
 			}
 		case Identifier_int3:
-			if IsBlank(code[i]){
+			if IsBlank(ch) {
 				NowToken.TokenType = "Int"
-				state = InitToken(code[i])
-			}else{
+				state = InitToken(ch)
+			} else {
 				state = Identifier //切换会Identifier
-				TokenText += string(code[i])
+				TokenText += string(ch)
 			}
 		case Assignment:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case SemiColon:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case LeftParen:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case RightParen:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case Plus:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case Minus:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case Star:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		case Slash:
-			state = InitToken(code[i])
+			state = InitToken(ch)
 		default:
-			
 		}
 	}
 	//把最后一个token加进来
-	if len(TokenText) > 0{
+	if len(TokenText) > 0 {
 		InitToken(' ')
 	}
 }
@@ -205,7 +214,7 @@ func main()  {
 	for i := 0; i < len(Tokens); i++{
 		fmt.Println(Tokens[i])
 	}
-	fmt.Println(strings.Repeat("-",20))
+	fmt.Println(strings.Repeat("-",100))
 
 	Tokens = Tokens[:0] //清空切片
 	script = "int age = 45;"
@@ -214,7 +223,7 @@ func main()  {
 	for i := 0; i < len(Tokens); i++{
 		fmt.Println(Tokens[i])
 	}
-	fmt.Println(strings.Repeat("-",20))
+	fmt.Println(strings.Repeat("-",100))
 
 	Tokens = Tokens[:0]
 	script = "2 * 3 = 6;"
